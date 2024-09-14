@@ -1,15 +1,24 @@
 import { generateReturnsArray } from './src/investmentsGoals';
+import { Chart } from 'chart.js/auto';
 
+const finalMoneyChart = document.getElementById('final-money-distribution');
+const progressionChart = document.getElementById('progression');
 const form = document.getElementById('investment-form');
 const clearButton = document.getElementById('clear-form');
+let doughtnutChartReference = {};
+let progressionChartReference = {};
 // const calculateButton = document.getElementById('calculate-results');
+
+function formatCorrency(value) {
+	return value.toFixed(2);
+}
 
 function renderProgression(evt) {
 	evt.preventDefault();
 	if (document.querySelector('.error')) {
 		return;
 	}
-
+	resetCharts();
 	// const startingAmount = Number(form['startingAmount'].value);
 	const startingAmount = Number(
 		document.getElementById('starting-amount').value.replace(',', '.')
@@ -23,12 +32,11 @@ function renderProgression(evt) {
 	const timeAmountPeriod =
 		document.getElementById('time-amount-period').value;
 	const returnRate = Number(
-		document.getElementById('return-rate').value
-	).replace(',', '.');
+		document.getElementById('return-rate').value.replace(',', '.')
+	);
 	const returnRatePeriod = document.getElementById('evaluation-period').value;
-	const taxRate = Number(document.getElementById('tax-rate').value).replace(
-		',',
-		'.'
+	const taxRate = Number(
+		document.getElementById('tax-rate').value.replace(',', '.')
 	);
 
 	const returnsArray = generateReturnsArray(
@@ -40,7 +48,85 @@ function renderProgression(evt) {
 		returnRatePeriod
 	);
 
-	console.log(returnsArray);
+	const finalInvestmentObject = returnsArray[returnsArray.length - 1];
+
+	doughtnutChartReference = new Chart(finalMoneyChart, {
+		type: 'doughnut',
+		data: {
+			labels: ['Total Investido', 'Rendimento', 'Imposto'],
+			datasets: [
+				{
+					data: [
+						formatCorrency(finalInvestmentObject.investedAmount),
+						formatCorrency(
+							finalInvestmentObject.totalInterestReturns *
+								(1 - taxRate / 100)
+						),
+						formatCorrency(
+							finalInvestmentObject.totalInterestReturns *
+								(taxRate / 100)
+						),
+					],
+					backgroundColor: [
+						'rgb(255, 99, 132)',
+						'rgb(54, 162, 235)',
+						'rgb(255, 205, 86)',
+					],
+					hoverOffset: 4,
+				},
+			],
+		},
+	});
+
+	progressionChartReference = new Chart(progressionChart, {
+		type: 'bar',
+		data: {
+			labels: returnsArray.map(
+				(investmentObject) => investmentObject.mounth
+			),
+			datasets: [
+				{
+					label: 'Total Investido',
+					data: returnsArray.map((investmentObject) =>
+						formatCorrency(investmentObject.investedAmount)
+					),
+					backgroundColor: 'rgb(255, 99, 132)',
+				},
+				{
+					label: 'Retorno do Invesitmento',
+					data: returnsArray.map((investmentObject) =>
+						formatCorrency(investmentObject.interestReturns)
+					),
+					backgroundColor: 'rgb(54, 162, 235)',
+				},
+			],
+		},
+		options: {
+			responsive: true,
+			scales: {
+				x: {
+					stacked: true,
+				},
+				y: {
+					stacked: true,
+				},
+			},
+		},
+	});
+}
+
+function isObjectEmpty(obj) {
+	return Object.keys(obj).length === 0;
+}
+
+function resetCharts() {
+	if (
+		!isObjectEmpty(doughtnutChartReference) &&
+		!isObjectEmpty(progressionChartReference)
+	) {
+		doughtnutChartReference.destroy();
+		progressionChartReference.destroy();
+	}
 }
 
 function limparFormulario() {
@@ -49,6 +135,8 @@ function limparFormulario() {
 	form['time-amount'].value = '';
 	form['return-rate'].value = '';
 	form['tax-rate'].value = '';
+
+	resetCharts();
 
 	const errorInputContainers = document.querySelectorAll('.error');
 
